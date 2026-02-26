@@ -8,7 +8,7 @@ class CustomTokenAuthentication(TokenAuthentication):
     
     def token_expirado(self, token):
         tiempo_de_uso = timezone.now() - token.created
-        tiempo_restante = timedelta(seconds=settings.EXPIRING_TOKEN_DURATION) - tiempo_de_uso
+        tiempo_restante = seconds=settings.EXPIRING_TOKEN_DURATION - tiempo_de_uso
         
         expirado = tiempo_restante < timedelta(seconds=0)
         
