@@ -1,12 +1,9 @@
-from django.shortcuts import render
 from django.contrib.auth.models import User
 from .serializers import *
 from .models import Profile
 from rest_framework import generics, permissions, status
-from django.contrib.auth import authenticate
-from rest_framework.authtoken.models import Token
-from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 
 # Create your views here.
 
@@ -29,11 +26,12 @@ class RegisterView(generics.CreateAPIView):
         
         user = serializer.save()
         
-        token, created = Token.objects.get_or_create(user=user)
+        refresh = RefreshToken.for_user(user)
         
         return Response({
             'user':user.username,
-            'token':token.key,
+            'access':str(refresh.access_token),
+            'refresh':str(refresh),
             'message':'Usuario registrado exitosamente',
         }, status=status.HTTP_201_CREATED)
     
