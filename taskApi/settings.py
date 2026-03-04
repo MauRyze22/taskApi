@@ -29,6 +29,17 @@ INSTALLED_APPS = [
     'drf_yasg',
 ]
 
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+        }
+    },
+    'USE_SESSION_AUTH': False,  
+}
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -59,7 +70,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'taskApi.urls'
 
-from datetime import timedelta
 EXPIRING_TOKEN_DURATION = timedelta(hours=24)
 
 TEMPLATES = [
