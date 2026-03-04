@@ -1,18 +1,18 @@
 # TaskFlow API
 
-**API REST para gestión de tareas, proyectos y equipos con autenticación por token**
+**API REST para gestión de tareas, proyectos y equipos con autenticación JWT**
 
 [![Django](https://img.shields.io/badge/Django-6.0-green.svg)](https://www.djangoproject.com/)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
 [![DRF](https://img.shields.io/badge/DRF-3.16-red.svg)](https://www.django-rest-framework.org/)
 
-🔗 **[Demo en vivo](https://taskflow-api.onrender.com)** *(próximamente)*
+🔗 **[Demo en vivo](https://taskflow-api.onrender.com)**
 
 ---
 
 ## 🎯 ¿Qué es TaskFlow API?
 
-API REST backend para gestión colaborativa de tareas y proyectos con sistema de equipos, permisos granulares y autenticación por token.
+API REST backend para gestión colaborativa de tareas y proyectos con sistema de equipos, permisos granulares y autenticación JWT.
 
 **Ideal para:** Frontends (React, Vue, Angular), apps móviles (iOS, Android), integraciones con otros sistemas.
 
@@ -22,7 +22,9 @@ API REST backend para gestión colaborativa de tareas y proyectos con sistema de
 
 **Autenticación:**
 - Sistema completo de registro, login y logout
-- Autenticación por Token (Django REST Framework)
+- Autenticación JWT con access token y refresh token
+- Expiración automática y rotación de tokens
+- Logout real con blacklist de tokens
 - Gestión de perfiles de usuario
 
 **Gestión de equipos y proyectos:**
@@ -45,7 +47,7 @@ API REST backend para gestión colaborativa de tareas y proyectos con sistema de
 
 - **Backend:** Python 3.11+ | Django 6.0 | Django REST Framework 3.16
 - **Base de datos:** SQLite (desarrollo) | PostgreSQL (producción)
-- **Autenticación:** Token Authentication
+- **Autenticación:** JWT (djangorestframework-simplejwt)
 - **Documentación:** drf-yasg (Swagger/OpenAPI)
 - **Deployment:** Render
 
@@ -62,8 +64,8 @@ API REST backend para gestión colaborativa de tareas y proyectos con sistema de
 
 ```bash
 # Clonar repositorio
-git clone https://github.com/MauRyze22/taskflow-api.git
-cd taskflow-api
+git clone https://github.com/MauRyze22/taskApi.git
+cd taskApi
 
 # Crear entorno virtual
 python -m venv venv
@@ -90,7 +92,14 @@ Abre http://127.0.0.1:8000
 
 ---
 
-## 🔐 Autenticación
+## 🔐 Autenticación JWT
+
+Esta API usa **JSON Web Tokens (JWT)**. El flujo es:
+
+1. Registrarse o hacer login → recibís **access token** + **refresh token**
+2. Usás el **access token** en cada request (expira en 30 min)
+3. Cuando expira, usás el **refresh token** para obtener uno nuevo
+4. Para logout, invalidás el refresh token con blacklist
 
 ### Registro
 ```http
@@ -111,14 +120,13 @@ Content-Type: application/json
 ```json
 {
   "user": "usuario",
-  "token": "abc123def456...",
   "message": "Usuario registrado exitosamente"
 }
 ```
 
 ### Login
 ```http
-POST /api/accounts/login/
+POST /api/token/
 Content-Type: application/json
 
 {
@@ -130,38 +138,66 @@ Content-Type: application/json
 **Respuesta:**
 ```json
 {
-  "user": "usuario",
-  "token": "abc123def456...",
-  "message": "Inicio de sesión exitoso"
+  "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
 }
 ```
 
-### Uso del token
+### Uso del access token
 ```http
-GET /api/tasks/tasks/
-Authorization: Token abc123def456...
+GET /api-tasks/tasks/
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+```
+
+### Refrescar token (cuando el access expira)
+```http
+POST /api/token/refresh/
+Content-Type: application/json
+
+{
+  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+}
+```
+
+**Respuesta:**
+```json
+{
+  "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+}
+```
+
+### Logout (invalidar refresh token)
+```http
+POST /api/token/blacklist/
+Content-Type: application/json
+
+{
+  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+}
 ```
 
 ---
 
 ## 📚 Endpoints principales
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| POST | `/accounts/register/` | Registrar usuario |
-| POST | `/accounts/login/` | Iniciar sesión |
-| POST | `/accounts/logout/` | Cerrar sesión |
-| GET | `/accounts/profile/` | Ver perfil |
-| GET | `/api-tasks/teams/` | Listar equipos |
-| POST | `/api-tasks/teams/` | Crear equipo |
-| GET | `/api-tasks/projects/` | Listar proyectos |
-| POST | `/api-tasks/projects/` | Crear proyecto |
-| GET | `/api-tasks/tasks/` | Listar tareas |
-| POST | `/api-tasks/tasks/` | Crear tarea |
-| POST | `/api-tasks/tasks/{id}/completar/` | Completar tarea |
-| GET | `/api-tasks/tasks/pendientes/` | Ver tareas pendientes |
-| GET | `/api-tasks/comments/` | Listar comentarios |
-| POST | `/api-tasks/comments/` | Crear comentario |
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/accounts/register/` | Registrar usuario | ❌ |
+| POST | `/api/token/` | Login (obtener tokens) | ❌ |
+| POST | `/api/token/refresh/` | Refrescar access token | ❌ |
+| POST | `/api/token/blacklist/` | Logout (invalidar token) | ✅ |
+| GET | `/api/accounts/profile/` | Ver perfil | ✅ |
+| PUT | `/api/accounts/profile/` | Actualizar perfil | ✅ |
+| GET | `/api-tasks/teams/` | Listar equipos | ✅ |
+| POST | `/api-tasks/teams/` | Crear equipo | ✅ |
+| GET | `/api-tasks/projects/` | Listar proyectos | ✅ |
+| POST | `/api-tasks/projects/` | Crear proyecto | ✅ |
+| GET | `/api-tasks/tasks/` | Listar tareas | ✅ |
+| POST | `/api-tasks/tasks/` | Crear tarea | ✅ |
+| POST | `/api-tasks/tasks/{id}/completar/` | Completar tarea | ✅ |
+| GET | `/api-tasks/tasks/pendientes/` | Ver tareas pendientes | ✅ |
+| GET | `/api-tasks/comments/` | Listar comentarios | ✅ |
+| POST | `/api-tasks/comments/` | Crear comentario | ✅ |
 
 **Documentación completa:** http://localhost:8000/swagger/
 
@@ -170,7 +206,7 @@ Authorization: Token abc123def456...
 ## 📂 Estructura del proyecto
 
 ```
-taskflow-api/
+taskApi/
 ├── taskApi/              # Configuración Django
 │   ├── settings.py       # Configuración con variables de entorno
 │   ├── urls.py
@@ -180,10 +216,10 @@ taskflow-api/
 │   ├── serializers.py    # Serializers optimizados
 │   ├── views.py          # ViewSets con permisos
 │   └── urls.py
-├── accounts/             # Autenticación
+├── accounts/             # Autenticación y perfiles
 │   ├── models.py         # Profile
-│   ├── serializers.py    # Register, Login
-│   ├── views.py          # Auth views
+│   ├── serializers.py    # Register
+│   ├── views.py          # Register, Profile views
 │   └── urls.py
 ├── requirements.txt      # Dependencias
 ├── Procfile             # Config para deployment
@@ -195,9 +231,11 @@ taskflow-api/
 
 ## 🔒 Seguridad
 
-- Autenticación obligatoria en todos los endpoints (excepto register/login)
+- Autenticación JWT obligatoria en todos los endpoints (excepto register/login)
+- Access token con expiración de 30 minutos
+- Refresh token con expiración de 1 día
+- Blacklist de tokens para logout real
 - Control de permisos granular (usuarios solo ven sus datos)
-- Tokens con expiración configurable
 - CSRF protection en producción
 - Variables de entorno para secretos
 
@@ -205,12 +243,7 @@ taskflow-api/
 
 ## 🧪 Testing
 
-*Testing en desarrollo* - Próximamente se agregarán tests unitarios y de integración.
-
-Para ejecutar el servidor de desarrollo:
-```bash
-python manage.py runserver
-```
+*Tests unitarios e integración en desarrollo — próximamente.*
 
 ---
 
@@ -233,13 +266,13 @@ CSRF_TRUSTED_ORIGINS=https://tu-app.onrender.com
 Proyecto de portfolio personal para demostrar habilidades en:
 
 ✓ Django REST Framework y arquitectura de APIs  
-✓ Autenticación y autorización con tokens  
+✓ Autenticación JWT con simplejwt  
 ✓ Serializers optimizados y datos anidados  
 ✓ Control de permisos granular  
 ✓ Optimización de queries (N+1 problem)  
-✓ Deployment en producción  
+✓ Deployment en producción con Render  
 
-**Feedback y sugerencias son bienvenidos** → [Abrir issue](https://github.com/MauRyze22/taskflow-api/issues)
+**Feedback y sugerencias son bienvenidos** → [Abrir issue](https://github.com/MauRyze22/taskApi/issues)
 
 ---
 
@@ -247,7 +280,7 @@ Proyecto de portfolio personal para demostrar habilidades en:
 
 **Amaury Monteagudo** — Backend Developer
 
-Especializado en Python, Django, APIs REST y arquitecturas escalables.
+Especializado en Python, Django, APIs REST y bases de datos.
 
 📧 amaurymonteagudop22@gmail.com  
 🔗 [GitHub](https://github.com/MauRyze22) | [LinkedIn](https://www.linkedin.com/in/amaury-monteagudo-40375b3a5)
