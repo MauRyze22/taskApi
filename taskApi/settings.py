@@ -26,27 +26,23 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'tasks',
     'accounts',
-    'drf_yasg',
+    'drf_spectacular',
 ]
 
-SWAGGER_SETTINGS = {
-    'SECURITY_DEFINITIONS': {
-        'Bearer': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header',
-        }
-    },
-    'USE_SESSION_AUTH': False,  
-}
-
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'TaskFlow API',
+    'DESCRIPTION': 'API REST para gestión de tareas y equipos',
+    'VERSION': '1.0.0',
 }
 
 from datetime import timedelta
