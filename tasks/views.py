@@ -1,9 +1,11 @@
 from .serializers import *
 from rest_framework import viewsets, permissions
+from rest_framework import generics
 from rest_framework.response import Response
 from .models import *
 from django.db.models import Q
 from rest_framework.decorators import action
+from django.db.models import Count
 
 # Create your views here.
 
@@ -99,3 +101,19 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user = self.request.user)
 
+
+class TaskViewDb(generics.GenericAPIView):
+    serializer_class=TaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        total_tareas = Task.objects.aggregate(total = Count('id'))['total']
+        tareas_por_estado = Task.objects.values('estado').annotate(total = Count('id'))
+        usuario_con_mas_tasks = Task.objects.values('asignado_a__username').annotate(total = Count('id')).order_by('-total').first()
+        tasks_sin_asignar = Task.objects.filter(asignado_a__isnull=True).count()
+        return Response({
+            'total_tareas':total_tareas,
+            'tareas_por_estado':tareas_por_estado,
+            'usuario_con_mas_tasks':usuario_con_mas_tasks['asignado_a__username'],
+            'tasks_sin_asignar':tasks_sin_asignar
+            })
