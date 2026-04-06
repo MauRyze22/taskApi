@@ -1,6 +1,6 @@
 from rest_framework import routers
 from django.urls import path
-from .views import *
+from .views import TeamViewSet, ProjectViewSet, TaskViewSet, CommentViewSet, TaskViewDb
 
 router = routers.DefaultRouter()
 

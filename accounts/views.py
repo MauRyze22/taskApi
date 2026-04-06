@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User
-from .serializers import *
+from .serializers import ProfileSerializer, RegisterSerializer, LoginSerializer
 from .models import Profile
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
