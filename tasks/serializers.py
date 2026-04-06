@@ -13,9 +13,13 @@ class TeamSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Team
-        fields = ['id', 'numero', 'jefe_username', 'integrantes_usernames', 'created', 'updated']
+        fields = ['id', 'numero', 'jefe_username', 'jefe', 'integrantes_usernames', 'integrantes', 'created', 'updated']
         read_only_fields = ['created', 'updated']
-    
+        extra_kwargs = {
+            'jefe':{'write_only':True},
+            'integrantes':{'write_only':True}
+        }
+
     def get_integrantes_usernames(self, obj):
         return [user.username for user in obj.integrantes.all()]
 
@@ -25,8 +29,12 @@ class ProjectSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Project
-        fields = ['id', 'name', 'tipo', 'tutor_username', 'equipo_numero', 'created', 'updated']
+        fields = ['id', 'name', 'tipo', 'tutor_username', 'tutor', 'equipo_numero', 'equipo', 'created', 'updated']
         read_only_fields = ['created', 'updated']
+        extra_kwargs ={
+            'tutor':{'write_only':True},
+            'equipo':{'write_only':True}
+        }
 
 class TaskSerializer(serializers.ModelSerializer):
     proyecto_name = serializers.CharField(source='proyecto.name', read_only=True)
@@ -35,11 +43,15 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'id', 'contenido', 'proyecto_name', 'estado', 
-            'asignado_a_username', 'fecha_limite', 
+            'id', 'contenido', 'proyecto_name', 'proyecto', 'estado', 
+            'asignado_a_username', 'asignado_a', 'fecha_limite', 
             'created', 'updated'
         ]
         read_only_fields = ['created', 'updated']
+        extra_kwargs = {
+            'proyecto': {'write_only': True}, 
+            'asignado_a': {'write_only': True}
+        }
 
 class CommentSerializer(serializers.ModelSerializer):
     user_username = serializers.CharField(source='user.username', read_only=True)
@@ -47,5 +59,9 @@ class CommentSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Comment
-        fields = ['id', 'tarea_contenido', 'user_username', 'cuerpo', 'created', 'updated']
+        fields = ['id', 'tarea_contenido', 'tarea', 'user_username', 'user', 'cuerpo', 'created', 'updated']
         read_only_fields = ['created', 'updated']
+        extra_kwargs = {
+            'tarea':{'write_only':True},
+            'user':{'write_only':True}
+        }
