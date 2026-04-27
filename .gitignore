@@ -34,3 +34,5 @@ Thumbs.db
 
 # Render
 .render.yaml
+.coverage
+htmlcov/
