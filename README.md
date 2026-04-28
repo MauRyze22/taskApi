@@ -3,10 +3,12 @@
 **API REST para gestión de tareas, proyectos y equipos con autenticación JWT**
 
 [![Django](https://img.shields.io/badge/Django-6.0-green.svg)](https://www.djangoproject.com/)
-[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 [![DRF](https://img.shields.io/badge/DRF-3.16-red.svg)](https://www.django-rest-framework.org/)
+[![Coverage](https://img.shields.io/badge/Coverage-93%25-brightgreen.svg)]()
+[![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://www.docker.com/)
 
-🔗 **[Demo en vivo](https://taskflow-api.onrender.com)**
+🔗 **[Demo en vivo](https://taskapi-30ij.onrender.com)**
 
 ---
 
@@ -35,32 +37,75 @@ API REST backend para gestión colaborativa de tareas y proyectos con sistema de
 **Endpoints personalizados:**
 - Completar tareas con un solo request
 - Filtrar tareas pendientes
+- Estadísticas avanzadas con ORM (aggregate, annotate, Case/When)
 - Optimización de queries (select_related, prefetch_related)
 
 **Documentación:**
-- Swagger UI interactivo (drf-yasg)
+- Swagger UI interactivo (drf-spectacular)
 - Ejemplos de requests/responses
+
+**Testing:**
+- 30 tests unitarios e integración
+- 93% de cobertura de código
+- Tests de autenticación JWT, permisos, validaciones y modelos
+
+**Docker:**
+- Contenedores para Django y PostgreSQL
+- Configuración lista para desarrollo con docker-compose
 
 ---
 
 ## 🛠️ Stack tecnológico
 
-- **Backend:** Python 3.11+ | Django 6.0 | Django REST Framework 3.16
+- **Backend:** Python 3.12 | Django 6.0 | Django REST Framework 3.16
 - **Base de datos:** SQLite (desarrollo) | PostgreSQL (producción)
 - **Autenticación:** JWT (djangorestframework-simplejwt)
-- **Documentación:** drf-yasg (Swagger/OpenAPI)
+- **Documentación:** drf-spectacular (Swagger/OpenAPI)
+- **Testing:** Django TestCase + APITestCase | Coverage 93%
+- **Contenedores:** Docker + Docker Compose
 - **Deployment:** Render
 
 ---
 
 ## 📦 Instalación local
 
-### Requisitos previos
-- Python 3.11+
+### Opción A — Con Docker (recomendado)
+
+#### Requisitos previos
+- Docker Desktop instalado y corriendo
+
+```bash
+# Clonar repositorio
+git clone https://github.com/MauRyze22/taskApi.git
+cd taskApi
+
+# Configurar variables de entorno
+cp .env.example .env
+# Edita .env con tus valores
+
+# Levantar contenedores
+docker-compose up --build
+
+# En otra terminal — correr migraciones
+docker-compose exec web python manage.py migrate
+
+# Crear superusuario
+docker-compose exec web python manage.py createsuperuser
+
+# Recolectar archivos estáticos
+docker-compose exec web python manage.py collectstatic --noinput
+```
+
+Abre http://localhost:8000
+
+---
+
+### Opción B — Sin Docker
+
+#### Requisitos previos
+- Python 3.12+
 - pip
 - Git
-
-### Setup
 
 ```bash
 # Clonar repositorio
@@ -149,7 +194,7 @@ GET /api-tasks/tasks/
 Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
 ```
 
-### Refrescar token (cuando el access expira)
+### Refrescar token
 ```http
 POST /api/token/refresh/
 Content-Type: application/json
@@ -159,14 +204,7 @@ Content-Type: application/json
 }
 ```
 
-**Respuesta:**
-```json
-{
-  "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
-}
-```
-
-### Logout (invalidar refresh token)
+### Logout
 ```http
 POST /api/token/blacklist/
 Content-Type: application/json
@@ -196,6 +234,7 @@ Content-Type: application/json
 | POST | `/api-tasks/tasks/` | Crear tarea | ✅ |
 | POST | `/api-tasks/tasks/{id}/completar/` | Completar tarea | ✅ |
 | GET | `/api-tasks/tasks/pendientes/` | Ver tareas pendientes | ✅ |
+| GET | `/api-tasks/tasks/details/` | Estadísticas avanzadas | ✅ |
 | GET | `/api-tasks/comments/` | Listar comentarios | ✅ |
 | POST | `/api-tasks/comments/` | Crear comentario | ✅ |
 
@@ -215,17 +254,66 @@ taskApi/
 │   ├── models.py         # Team, Project, Task, Comment
 │   ├── serializers.py    # Serializers optimizados
 │   ├── views.py          # ViewSets con permisos
+│   ├── tests.py          # 30 tests — 93% coverage
 │   └── urls.py
 ├── accounts/             # Autenticación y perfiles
 │   ├── models.py         # Profile
 │   ├── serializers.py    # Register
 │   ├── views.py          # Register, Profile views
 │   └── urls.py
+├── Dockerfile            # Imagen Docker
+├── docker-compose.yml    # Orquestación de contenedores
+├── .dockerignore         # Archivos excluidos de Docker
 ├── requirements.txt      # Dependencias
-├── Procfile             # Config para deployment
-├── .env.example         # Plantilla de variables
+├── Procfile              # Config para deployment
+├── .env.example          # Plantilla de variables
 └── README.md
 ```
+
+---
+
+## 🧪 Testing
+
+```bash
+# Correr todos los tests
+python manage.py test
+
+# Ver cobertura de código
+coverage run --source='.' manage.py test
+coverage report
+
+# Ver reporte visual
+coverage html
+```
+
+**Cobertura actual: 93%** — incluye tests de:
+- Autenticación JWT (obtener token, credenciales incorrectas, refresh, blacklist)
+- Endpoints CRUD (crear, listar, editar, eliminar)
+- Permisos (usuario no puede editar datos de otro)
+- Validaciones (campos requeridos, datos incorrectos)
+- Métodos de modelos (`esta_vencida`, `dias_para_vencer`, `__str__`)
+- Estadísticas avanzadas
+
+---
+
+## 🐳 Docker
+
+```bash
+# Levantar el proyecto
+docker-compose up --build
+
+# Detener contenedores
+docker-compose down
+
+# Ejecutar comandos dentro del contenedor
+docker-compose exec web python manage.py migrate
+docker-compose exec web python manage.py createsuperuser
+docker-compose exec web python manage.py test
+```
+
+**Servicios:**
+- `web` — Django + Gunicorn en puerto 8000
+- `db` — PostgreSQL 16 con datos persistentes
 
 ---
 
@@ -238,12 +326,6 @@ taskApi/
 - Control de permisos granular (usuarios solo ven sus datos)
 - CSRF protection en producción
 - Variables de entorno para secretos
-
----
-
-## 🧪 Testing
-
-*Tests unitarios e integración en desarrollo — próximamente.*
 
 ---
 
@@ -265,12 +347,15 @@ CSRF_TRUSTED_ORIGINS=https://tu-app.onrender.com
 
 Proyecto de portfolio personal para demostrar habilidades en:
 
-✓ Django REST Framework y arquitectura de APIs  
-✓ Autenticación JWT con simplejwt  
-✓ Serializers optimizados y datos anidados  
-✓ Control de permisos granular  
-✓ Optimización de queries (N+1 problem)  
-✓ Deployment en producción con Render  
+✓ Django REST Framework y arquitectura de APIs
+✓ Autenticación JWT con simplejwt
+✓ Serializers optimizados y datos anidados
+✓ Control de permisos granular
+✓ Optimización de queries (N+1 problem)
+✓ ORM avanzado (aggregate, annotate, F expressions, Case/When)
+✓ Testing con 93% de cobertura
+✓ Docker y docker-compose
+✓ Deployment en producción con Render
 
 **Feedback y sugerencias son bienvenidos** → [Abrir issue](https://github.com/MauRyze22/taskApi/issues)
 
@@ -282,7 +367,7 @@ Proyecto de portfolio personal para demostrar habilidades en:
 
 Especializado en Python, Django, APIs REST y bases de datos.
 
-📧 amaurymonteagudop22@gmail.com  
+📧 amaurymonteagudop22@gmail.com
 🔗 [GitHub](https://github.com/MauRyze22) | [LinkedIn](https://www.linkedin.com/in/amaury-monteagudo-40375b3a5)
 
 ---
