@@ -18,7 +18,7 @@ class Team(models.Model):
         ordering = ['-updated','-created']    
     
     def __str__(self):
-        return f"Equipo {self.numero} de {self.jefe.username}"
+        return f"Equipo {self.numero} de {self.jefe.username if self.jefe else "sin ejefe"}"
 
 class Project(models.Model):
     Tipo = [
@@ -38,10 +38,10 @@ class Project(models.Model):
     def __str__(self):
         return self.name
 
-class Task(models.Model):
+class Task(models.Model):   
     Estado = [
         ('pendiente', 'Pendiente'),
-        ('en_progreso', 'En_progreso'),
+        ('en_progreso', 'En progreso'),
         ('completada', 'Completada'),
         ('pausada', 'Pausada')   
     ]
