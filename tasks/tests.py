@@ -3,6 +3,8 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth.models import User
 from .models import Project, Team, Task, Comment
+from datetime import datetime, timedelta
+from django.utils import timezone
 
 # Create your tests here.
 
@@ -14,17 +16,36 @@ class TaskApiTests(APITestCase):
             password='testpassword'
         )
 
+        self.user_2 = User.objects.create_user(
+            username='testuser2',
+            password='testpassword2'
+        )
+
         self.team = Team.objects.create(
             numero = '1',
             jefe = self.user
         )
 
+        self.team_2 = Team.objects.create(
+            numero = '2',
+            jefe = self.user_2
+        )
+
         self.team.integrantes.add(self.user)
-    
+
+        self.team_2.integrantes.add(self.user_2)
+
         self.project = Project.objects.create(
             name = 'Primer proyecto',
             tutor=self.user,
             equipo = self.team,
+            tipo = 'personal'
+        )
+
+        self.project_2 = Project.objects.create(
+            name = 'Segundo proyecto',
+            tutor = self.user_2,
+            equipo = self.team_2,
             tipo = 'personal'
         )
 
@@ -42,12 +63,11 @@ class TaskApiTests(APITestCase):
 
 
     # Metodo para reutilizar y q no sean repetitivos los tests
-    def authenticate(self):
+    def authenticate(self, username='testuser', password='testpassword'):
         login_response = self.client.post('/api/token/',{
-            'username':'testuser',
-            'password':'testpassword'
+           'username':username,
+           'password':password
         })
-
         token = login_response.data['access']
         self.client.credentials(HTTP_AUTHORIZATION = 'Bearer ' + token)
 
@@ -94,7 +114,7 @@ class TaskApiTests(APITestCase):
         response = self.client.post('/api-tasks/tasks/',{
             'contenido':'Hello mi primera tarea por test',
             'estado':'completada',
-            'proyecto':int(self.project.id),
+            'proyecto':self.project.id,
         })
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -154,12 +174,12 @@ class TaskApiTests(APITestCase):
 
         login_response = self.client.post('/api/token/',{
             'username': 'amaury',
-            'password': 'dragonball022'
+            'password': 'dragonball0522'
         })
 
         self.client.force_authenticate(user = otro_user)
 
-        response = self.client.put(f'/api-tasks/{self.task.id}/', {
+        response = self.client.put(f'/api-tasks/tasks/{self.task.id}/', {
             'contenido': 'Hola no deberia poder editar esta tarea',
             'estado':'pendiente',
             'proyecto':int(self.project.id)
@@ -296,7 +316,6 @@ class TaskApiTests(APITestCase):
     
     # Test esta_vencida() — con fecha pasada -> True
     def test_esta_vencida_con_fecha_pasada(self):
-        from django.utils import timezone
         self.task.estado = 'pendiente'
         self.task.fecha_limite = timezone.make_aware(
             timezone.datetime(2020, 1, 1)
@@ -316,7 +335,6 @@ class TaskApiTests(APITestCase):
         
     # Test dias_para_vencer() — con fecha futura -> numero positivo
     def test_dias_para_vencer_con_fecha_futura(self):
-        from django.utils import timezone
         self.task.estado = 'pendiente'
         self.task.fecha_limite = timezone.make_aware(
             timezone.datetime(2030, 1, 1)
@@ -325,3 +343,126 @@ class TaskApiTests(APITestCase):
         resultado = self.task.dias_para_vencer()
         self.assertIsNotNone(resultado)
         self.assertGreater(resultado, 0)
+
+
+    def test_crear_tarea_con_fecha_anterior_a_la_actual(self):
+        self.authenticate()
+        dia_actual = datetime.now()
+        dia_ayer = dia_actual - timedelta(days=1)
+
+        response = self.client.post('/api-tasks/tasks/',{
+            'contenido':'Hello mi primera tarea por test',
+            'estado':'completada',
+            'proyecto':self.project.id,
+            'fecha_limite': dia_ayer
+        })
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_crear_tarea_con_fecha_mucho_despues_a_la_actual(self):
+        self.authenticate()
+        dia_actual = datetime.now()
+
+        response = self.client.post('/api-tasks/tasks/',{
+            'contenido':'Hello mi primera tarea por test',
+            'estado':'completada',
+            'proyecto':self.project.id,
+            'fecha_limite': dia_actual + timedelta(days=500)
+        })
+    
+        self.assertEqual(response.status_code, 201)
+
+    def test_crear_tarea_con_usuario_asignado_sin_pertenecer_al_equipo(self):
+        self.authenticate()
+
+        response = self.client.post('/api-tasks/tasks/',{
+            'contenido':'Hello mi primera tarea por test',
+            'estado':'completada',
+            'proyecto':self.project.id,
+            'asignado_a': self.user_2.id
+        })
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_crear_tarea_con_usuario_asignado_que_pertenecer_al_equipo(self):
+        self.authenticate()
+        response = self.client.post('/api-tasks/tasks/',{
+            'contenido':'Hello mi primera tarea por test',
+            'estado':'completada',
+            'proyecto':self.project.id,
+            'asignado_a': self.user.id
+        })
+    
+        self.assertEqual(response.status_code, 201)
+
+    def test_crear_proyecto_donde_tutor_no_pertenece_al_equipo(self):
+        self.authenticate()
+        response = self.client.post('/api-tasks/projects/',{
+            'name':'PR2',
+            'tutor':self.user_2.id,
+            'equipo':self.team.id,
+            'tipo':'personal'
+        })
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_crear_proyecto_donde_tutor_si_pertenece_al_equipo(self):
+        self.authenticate()
+        response = self.client.post('/api-tasks/projects/',{
+            'name':'PR2',
+            'tutor':self.user.id,
+            'equipo':self.team.id,
+            'tipo':'personal'
+        })
+
+        self.assertEqual(response.status_code, 201)
+
+    def test_crear_tarea_donde_usuario_es_de_otro_proyecto(self):
+        self.authenticate(self.user_2.username, 'testpassword2')
+        response = self.client.post('/api-tasks/tasks/',{
+            'contenido':'Hello mi primera tarea por test',
+            'estado':'completada',
+            'proyecto':self.project.id,
+        })
+        self.assertEqual(response.status_code, 400)
+
+    def test_crear_comentario_con_usuario_de_otra_tarea(self):
+        self.authenticate(self.user_2.username, 'testpassword2')
+        response = self.client.post('/api-tasks/comments/',{
+            'tarea':self.task.id,
+            'user':self.user_2.id,
+            'cuerpo':'Hola mi 2do comentario en test'
+        })
+        self.assertEqual(response.status_code, 400)
+
+    def test_crear_proyecto_con_usuario_de_otro_equipo(self):
+        self.authenticate(self.user_2.username, 'testpassword2')
+        response = self.client.post('/api-tasks/projects/',{
+            'name':'PR3',
+            'tutor':self.user_2.id,
+            'equipo':self.team.id,
+            'tipo':'personal'
+        })
+        self.assertEqual(response.status_code, 400)
+
+    def test_ver_tarea_de_un_usuario_con_usuario_diferente(self):
+        self.authenticate(self.user_2.username, 'testpassword2')
+        response = self.client.get(f'/api-tasks/tasks/{self.task.id}/')
+        self.assertEqual(response.status_code, 404)
+
+    def test_actualizar_tarea_de_un_usuario_con_usuario_diferente(self):
+        self.authenticate(self.user_2.username, 'testpassword2')
+        response = self.client.put(f'/api-tasks/tasks/{self.task.id}/',{
+            'name': 'Esto debe dar 404'
+        })
+        self.assertEqual(response.status_code, 404)
+
+    def test_eliminar_tarea_de_un_usuario_con_usuario_diferente(self):
+        self.authenticate(self.user_2.username, 'testpassword2')
+        response = self.client.delete(f'/api-tasks/tasks/{self.task.id}/')
+        self.assertEqual(response.status_code, 404)
+    
+    
+
+
+        
