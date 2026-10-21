@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from .models import Project, Team, Task, Comment
 from datetime import datetime, timedelta
 from django.utils import timezone
+from unittest.mock import patch
 
 # Create your tests here.
 
@@ -13,12 +14,14 @@ class TaskApiTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username='testuser',
-            password='testpassword'
+            password='testpassword',
+            email='emailtest@gmail.com'
         )
 
         self.user_2 = User.objects.create_user(
             username='testuser2',
-            password='testpassword2'
+            password='testpassword2',
+            email='emailtest2@gmail.com'
         )
 
         self.team = Team.objects.create(
@@ -384,7 +387,8 @@ class TaskApiTests(APITestCase):
 
         self.assertEqual(response.status_code, 400)
 
-    def test_crear_tarea_con_usuario_asignado_que_pertenecer_al_equipo(self):
+    @patch('tasks.signals.resend.Emails.send')
+    def test_crear_tarea_con_usuario_asignado_que_pertenecer_al_equipo(self, mock_enviar):
         self.authenticate()
         response = self.client.post('/api-tasks/tasks/',{
             'contenido':'Hello mi primera tarea por test',
@@ -394,6 +398,7 @@ class TaskApiTests(APITestCase):
         })
     
         self.assertEqual(response.status_code, 201)
+        mock_enviar.assert_called_once()
 
     def test_crear_proyecto_donde_tutor_no_pertenece_al_equipo(self):
         self.authenticate()
