@@ -6,6 +6,11 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY = llave-secreta-falsa-solo-para-test-con-CI
+      ALLOED_HOSTS = "localhost:8000,127.0.0.1"
+      DEBUG = "True"
+      RESEND_API_KEY = resend_clave_falsa_solo_para_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -13,3 +18,4 @@ jobs:
           python-version: "3.12.8"
       - run: python --version
       - run: pip install -r requirements.txt
+      - run: pytest
