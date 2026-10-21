@@ -51,6 +51,5 @@ def test_verificar_que_email_se_llama(mock_enviar, api_client_autenticado, usuar
         'asignado_a':usuario.id
     })
 
-    print(response.data)
     assert response.status_code == 201
     mock_enviar.assert_called_once()
