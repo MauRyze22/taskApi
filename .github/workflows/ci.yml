@@ -4,9 +4,12 @@ on:
   pull_request:
 
 jobs:
-  saludo:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: ls
-      - run: echo "Hola desde GitHub"
+      - uses: actions/setup-python@v5
+        with: 
+          python-version: "3.12.8"
+      - run: python --version
+      - run: pip install -r requirements.txt
