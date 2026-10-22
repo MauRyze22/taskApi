@@ -3,6 +3,8 @@ import pytest
 from unittest.mock import patch
 from rest_framework.test import APIClient
 from .models import Project, Team
+from resend.exceptions import ResendError
+from .models import Task
 
 @pytest.fixture
 def usuario():
@@ -53,3 +55,19 @@ def test_verificar_que_email_se_llama(mock_enviar, api_client_autenticado, usuar
 
     assert response.status_code == 201
     mock_enviar.assert_called_once()
+
+
+@pytest.mark.django_db
+@patch('tasks.signals.resend.Emails.send')
+def test_tarea_se_crea_si_falla_el_email(mock_enviar, api_client_autenticado, usuario, proyecto, caplog):
+    mock_enviar.side_effect = ResendError(code=422, message="El destinatario requiere de un email valido", error_type="validation_error", suggested_action="", headers={})
+    response = api_client_autenticado.post('/api-tasks/tasks/',{
+        'contenido':'Hello mi segunda tarea por test',
+        'estado':'completada',
+        'proyecto':proyecto.id,
+        'asignado_a':usuario.id
+    })
+
+    assert response.status_code == 201
+    assert Task.objects.filter(contenido = 'Hello mi segunda tarea por test').exists()
+    assert 'No se puede enviar el email' in caplog.text
