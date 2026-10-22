@@ -36,3 +36,5 @@ Thumbs.db
 .render.yaml
 .coverage
 htmlcov/
+
+gunicorn.ctl

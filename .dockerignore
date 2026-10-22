@@ -1,8 +1,21 @@
+# control de versiones
+.git/
+.gitignore
+
+# entornos y secretos
 venv/
 .env
+
+# cachés y artefactos generados
 __pycache__/
 *.pyc
-db.sqlite3
-htmlcov/
+.pytest_cache/
 .coverage
+htmlcov/
+staticfiles/
+
+# datos locales y editor
+db.sqlite3
+.vscode/
 *.swp
+gunicorn.ctl
